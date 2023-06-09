@@ -1,0 +1,22 @@
+
+/system script
+add name=pppoe-limit-script source="
+:local pppoeInterface \"pppoe-out1\";     # Set the name of your PPPoE interface
+:local downloadLimit 1M;                  # Set the download limit for the PPPoE connection
+:local uploadLimit 1M;                    # Set the upload limit for the PPPoE connection
+
+:local pppoeId [/interface pppoe-client find interface=\$pppoeInterface]
+
+:if (\$pppoeId != \"\") do={
+    :log info \"PPPoE connection established. Applying bandwidth limits.\"
+    /queue simple set [find name=\"pppoe-limit\"] max-limit=\$downloadLimit/\$uploadLimit burst-limit=0/0 burst-threshold=0/0 burst-time=0s/0s disabled=no
+} else={
+    :log info \"No PPPoE connection. No bandwidth limits applied.\"
+    /queue simple set [find name=\"pppoe-limit\"] disabled=yes
+}
+"
+
+/system event
+add name=pppoe-connect-event policy=pppoe-out1_up on-event=pppoe-limit-script
+add name=pppoe-disconnect-event policy=pppoe-out1_down on-event=pppoe-limit-script
+
